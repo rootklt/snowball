@@ -17,7 +17,7 @@ golang给人的感觉很强大，其实就是强大，目前还没有学到家�
 
 ## 使用
 
-[!help](https://github.com/rootklt/snowball/blob/main/images/help.png)
+![help](https://github.com/rootklt/snowball/blob/main/images/help.png)
 
 1. 如果要使用xray扫描漏洞，则进入交互后启动xray代理
 
@@ -25,9 +25,9 @@ golang给人的感觉很强大，其实就是强大，目前还没有学到家�
     snowball>>xray start
 ```
 
-[!start xray](https://github.com/rootklt/snowball/blob/main/images/start_xray.png)
+![start xray](https://github.com/rootklt/snowball/blob/main/images/start_xray.png)
 
-[!stop_xray](https://github.com/rootklt/snowball/blob/main/images/xray_stop.png)
+![stop_xray](https://github.com/rootklt/snowball/blob/main/images/xray_stop.png)
 
 只是查询返回url=>title。
 
@@ -36,7 +36,7 @@ golang给人的感觉很强大，其实就是强大，目前还没有学到家�
 ```bash
     snowball>>search fofa -h    (查看帮助)
 ```
-[!fofa](https://github.com/rootklt/snowball/blob/main/images/fofa.png)
+![fofa](https://github.com/rootklt/snowball/blob/main/images/fofa.png)
 
 开启了xray代理扫描后会将搜索到的目标去重、通过代理访问目标，流量交给xray处理
 
@@ -44,7 +44,7 @@ golang给人的感觉很强大，其实就是强大，目前还没有学到家�
 
 4. 扫描到漏洞的话，一是将日志信息写到console，同时也写入日志文件（文件位置可以在config/logger.json配置），方便查询
 
-   [!scan](https://github.com/rootklt/snowball/blob/main/images/scanning.png)
+   ![scan](https://github.com/rootklt/snowball/blob/main/images/scanning.png)
 
 ## 声明
 
