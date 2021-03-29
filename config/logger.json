@@ -1,0 +1,17 @@
+{
+    "TimeFormat": "2006-01-02 15:04:05",
+    "Console": {
+        "level" : "INFO",
+        "color" : true
+    },
+    "File": {
+        "filename": "log/vuls.log",
+        "level": "INFO",
+        "daily": true,
+        "maxlines": 10000,
+        "maxsize": 1,
+        "maxdays": -1,
+        "append": true,
+        "permit": "0660"
+    }
+}

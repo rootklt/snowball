@@ -1,0 +1,15 @@
+fofa:
+  email: <email>                 #fofa注册邮箱
+  key: <md5>   #API密钥
+xray:
+  host: 127.0.0.1                         #xray代理主机地址
+  port: 10810                             #代理端口
+  action: webscan                         #主要是针对web扫描
+  plugins:                                #扫描插件
+    - phantasm
+  pocs:                                   #指定poc
+    - poc-yaml-weblogic-*                 
+webhook:                                  #xray使用webhook-output时的目标主机
+  host: 127.0.0.1
+  port: 8080                              
+  path: /scan/xray
