@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
 	"snowball/utils"
 	"strconv"
 	"strings"
@@ -52,7 +53,13 @@ func XrayStart(ctx *grumble.Context) error {
 	//webhook url
 	wf := &WebhookConfig{}
 	wf.ReadConfigFile()
-
+	osType := runtime.GOOS
+	xray := "xray/xray_darwin_amd64"
+	if osType == "linux" {
+		xray = "xray/xray_linux_amd64"
+	} else if osType == "windows" {
+		xray = "xray/xray_windows_amd64.exe"
+	}
 	if !isLockFileExist(lockFile) {
 		var wg sync.WaitGroup
 		c := make(chan *exec.Cmd)
@@ -60,7 +67,7 @@ func XrayStart(ctx *grumble.Context) error {
 		wg.Add(1)
 		go func(ch chan *exec.Cmd) {
 			defer wg.Done()
-			cmd := exec.Command("xray/xray_linux_amd64", "--config", "xray/config.yaml", cf.Action, "--plugins", strings.Join(cf.Plugins, ","), "--listen", fmt.Sprintf("%s:%d", cf.Host, cf.Port), "--webhook-output", fmt.Sprintf("http://%s:%d%s", wf.Host, wf.Port, wf.Path))
+			cmd := exec.Command(xray, "--config", "xray/config.yaml", cf.Action, "--plugins", strings.Join(cf.Plugins, ","), "--listen", fmt.Sprintf("%s:%d", cf.Host, cf.Port), "--webhook-output", fmt.Sprintf("http://%s:%d%s", wf.Host, wf.Port, wf.Path))
 			cmd.Start()
 			utils.SuccessOut.Printf("Xray start pid: %d\n", cmd.Process.Pid)
 			lf, err := os.Create(lockFile)
