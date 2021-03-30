@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/signal"
+	//"os/signal"
 	"runtime"
 	"snowball/utils"
 	"strconv"
@@ -148,7 +148,7 @@ func XrayStop() {
 	proccess.Signal(syscall.SIGTERM)
 	utils.WarnOutput.Println("Xray Stoped...")
 	defer os.Remove(lockFile)
-	go HandleSignal()
+	//go HandleSignal()
 }
 
 func XrayScan(ctx *grumble.Context) {
@@ -171,9 +171,11 @@ func XrayScan(ctx *grumble.Context) {
 	}
 
 }
+/*
 func HandleSignal() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGSTOP, syscall.SIGHUP)
 	<-sigs
 	XrayStop()
 }
+*/
