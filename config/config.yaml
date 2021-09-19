@@ -1,6 +1,6 @@
 fofa:
-  email: security666@163.com                 #fofa注册邮箱
-  key: 711fbadd4c9c482f18e6977dcdf48249   #API密钥
+  email: <fofaemail>                 #fofa注册邮箱
+  key: <fofakey>   #API密钥
 xray:
   host: 127.0.0.1                         #xray代理主机地址
   port: 10810                             #代理端口
