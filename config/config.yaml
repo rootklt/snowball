@@ -1,6 +1,6 @@
 fofa:
-  email: <fofaemail>                 #fofa注册邮箱
-  key: <fofakey>   #API密钥
+  email:                 #fofa注册邮箱
+  key:    #API密钥
 xray:
   host: 127.0.0.1                         #xray代理主机地址
   port: 10810                             #代理端口
@@ -13,3 +13,4 @@ webhook:                                  #xray使用webhook-output时的目标�
   host: 127.0.0.1
   port: 8090                             
   path: /scan/xray
+
