@@ -159,7 +159,7 @@ func (req *FofaRequest) RequestApi() *FofaResponse {
 
 	response, err := utils.DoRequest(request)
 
-	if err != nil {
+	if err != nil || response.StatusCode != 200 {
 		utils.WarnOutput.Println("[-]", err.Error())
 		return nil
 	}
