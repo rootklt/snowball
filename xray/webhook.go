@@ -7,11 +7,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"snowball/config"
 	"snowball/utils"
 	"time"
 
 	"github.com/wonderivan/logger"
-	"gopkg.in/yaml.v2"
 )
 
 //xray扫描到有漏洞时的请求数据
@@ -55,25 +55,6 @@ type RequestBodyType struct {
 	Type string `json:"type" yaml:"type"`
 }
 
-type WebhookConfig struct {
-	Webhook
-}
-type Webhook struct {
-	Port int    `yaml:"port"`
-	Host string `yaml:"host"`
-	Path string `yaml:"path"`
-}
-
-func (wf *WebhookConfig) ReadConfigFile() {
-	const fileName = "config/config.yaml"
-	buffer, err := ioutil.ReadFile(fileName)
-
-	if err != nil {
-		log.Printf("%v", err)
-	}
-	yaml.Unmarshal(buffer, wf)
-}
-
 func XrayWebhook(w http.ResponseWriter, r *http.Request) {
 	const logfile = "log/vuls.log"
 
@@ -85,6 +66,7 @@ func XrayWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.Unmarshal(result, rt)
+
 	if rt.Type == "web_vuln" {
 		res := &ScanResults{}
 		json.Unmarshal(result, res)
@@ -109,15 +91,18 @@ func XrayWebhook(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		io.WriteString(w, "Error")
+		utils.WarnOutput.Println("Error...")
 	}
 }
 
-func WebhookServer(wf *WebhookConfig) {
+func WebhookServer() {
+	wf := &config.WebHook{}
+	config.GetConfig(wf)
 
 	http.HandleFunc(wf.Path, XrayWebhook)
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", wf.Host, wf.Port), nil)
 	if err != nil {
-		log.Printf("%v", err)
+		log.Fatalf("%v", err)
 	}
 	fmt.Printf("[+]Start Webhook on %s:%d", wf.Host, wf.Port)
 }

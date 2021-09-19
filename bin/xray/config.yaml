@@ -64,15 +64,11 @@ plugins:
     enabled: true
   path-traversal:
     enabled: true
-  phantasm:                             # poc 插件
+  phantasm:
     enabled: true
-    depth: 1
-    auto_load_poc: false                # 除内置 poc 外，额外自动加载当前目录以 "poc-" 为文件名前缀的POC文件，等同于在 include_poc 中增加 "./poc-*"
+    depth: 2
     exclude_poc: []                     # 排除哪些 poc, 支持 glob 语法, 如: "/home/poc/*thinkphp*" 或 "poc-yaml-weblogic*"
-    include_poc: []                     # 只使用哪些内置 poc 以及 额外加载哪些本地 poc, 支持 glob 语法, 如："*weblogic*" 或 "/home/poc/*"
-                                        # 也可使用 --poc 仅运行 指定的内置或本地 poc，进行测试。
-                                        # 例如，可使用如下命令，仅运行当前目录下的 poc 且 不运行内置 poc 进行测试：
-                                        # webscan -poc ./poc-* -url http://example.com
+    include_poc: []                     # 只使用哪些 poc / 加载本地 poc, 支持 glob 语法, 如："*weblogic*" 或 "/home/poc/*"
   redirect:
     enabled: true
   shiro:
@@ -108,8 +104,8 @@ reverse:
   db_file_path: ""                      # 反连平台数据库文件位置, 这是一个 KV 数据库
   token: ""                             # 反连平台认证的 Token, 独立部署时不能为空
   http:
-    enabled: false
-    listen_ip: 0.0.0.0 
+    enabled: true
+    listen_ip: 
     listen_port: ""
     ip_header: ""                       # 在哪个 http header 中取 ip，为空代表从 REMOTE_ADDR 中取
   dns:
@@ -130,8 +126,8 @@ reverse:
 # 被动代理配置
 # 更多解释见 https://docs.xray.cool/#/configration/mitm
 mitm:
-  ca_cert: ./ca.crt                     # CA 根证书路径
-  ca_key: ./ca.key                      # CA 私钥路径
+  ca_cert: ./xray/ca.crt                     # CA 根证书路径
+  ca_key: ./xray/ca.key                      # CA 私钥路径
   basic_auth:                           # 基础认证的用户名密码
     username: ""
     password: ""

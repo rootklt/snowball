@@ -5,6 +5,7 @@ package interactor
 import (
 	//"fmt"
 
+	"snowball/api"
 	"snowball/fofa"
 	"snowball/xray"
 
@@ -121,9 +122,11 @@ func FofaCmd(queryCmd *grumble.Command) {
 			f.String("q", "query", "", "fofa查询语法")
 			f.Uint("p", "page", 1, "查询页数")
 			f.Bool("s", "scan", true, "默认不进行漏洞扫描")
+			f.Int("z", "size", 100, "查询数量")
 		},
 		Run: func(ctx *grumble.Context) error {
-			fofa.DoFofa(ctx)
+			fofa := &fofa.FofaQuery{Context: ctx}
+			api.DoQuery(fofa)
 			return nil
 		},
 	})

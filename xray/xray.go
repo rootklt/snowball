@@ -7,8 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	//"os/signal"
-	"runtime"
+	"snowball/config"
 	"snowball/utils"
 	"strconv"
 	"strings"
@@ -16,32 +15,14 @@ import (
 	"syscall"
 
 	"github.com/desertbit/grumble"
-	"gopkg.in/yaml.v2"
 )
 
-type Xray struct {
-	Port    int      `yaml:"port"`
-	Host    string   `yaml:"host"`
-	Action  string   `yaml:"action"`
-	Plugins []string `yaml:"plugins,flow"`
-	Pocs    []string `yaml:"pocs,flow"`
-}
-
-type XrayConfig struct {
-	Xray
-}
-
-const lockFile = "xray/xray.lock"
-const ConfigFile = "config/config.yaml"
-
-func (conf *XrayConfig) ReadConfigFile() {
-	buffer, _ := ioutil.ReadFile(ConfigFile)
-	yaml.Unmarshal(buffer, conf)
-}
+var lockFile = config.LockFile
 
 func XrayStart(ctx *grumble.Context) error {
-	cf := &XrayConfig{}
-	cf.ReadConfigFile()
+
+	cf := &config.Xray{}
+	config.GetConfig(cf)
 
 	if host := ctx.Flags.String("host"); host != "" {
 		cf.Host = host
@@ -50,24 +31,20 @@ func XrayStart(ctx *grumble.Context) error {
 		cf.Port = port
 	}
 
-	//webhook url
-	wf := &WebhookConfig{}
-	wf.ReadConfigFile()
-	osType := runtime.GOOS
-	xray := "xray/xray_darwin_amd64"
-	if osType == "linux" {
-		xray = "xray/xray_linux_amd64"
-	} else if osType == "windows" {
-		xray = "xray/xray_windows_amd64.exe"
-	}
+	wf := &config.WebHook{}
+	config.GetConfig(wf)
+
 	if !isLockFileExist(lockFile) {
+		hook := fmt.Sprintf("http://%s:%d%s", wf.Host, wf.Port, wf.Path)
+		listen := fmt.Sprintf("%s:%d", cf.Host, cf.Port)
+
 		var wg sync.WaitGroup
 		c := make(chan *exec.Cmd)
 		//启动xray监听服务
 		wg.Add(1)
 		go func(ch chan *exec.Cmd) {
 			defer wg.Done()
-			cmd := exec.Command(xray, "--config", "xray/config.yaml", cf.Action, "--plugins", strings.Join(cf.Plugins, ","), "--listen", fmt.Sprintf("%s:%d", cf.Host, cf.Port), "--webhook-output", fmt.Sprintf("http://%s:%d%s", wf.Host, wf.Port, wf.Path))
+			cmd := exec.Command(config.XrayPath, "--config", "xray/config.yaml", cf.Action, "--plugins", strings.Join(cf.Plugins, ","), "--listen", listen, "--webhook-output", hook)
 			cmd.Start()
 			utils.SuccessOut.Printf("Xray start pid: %d\n", cmd.Process.Pid)
 			lf, err := os.Create(lockFile)
@@ -162,15 +139,16 @@ func XrayScan(ctx *grumble.Context) {
 	action := ctx.Flags.String("action")
 	poc := ctx.Flags.String("poc")
 	if poc != "" {
-		cmd := exec.Command("xray/xray_linux_amd64", action, "--poc", poc, "--url", url)
+		cmd := exec.Command(config.XrayPath, action, "--poc", poc, "--url", url)
 		cmd.Start()
 	} else {
 		plugin := ctx.Flags.String("plugin")
-		cmd := exec.Command("xray/xray_linux_amd64", action, "--plugin", plugin, "--url", url)
+		cmd := exec.Command(config.XrayPath, action, "--plugin", plugin, "--url", url)
 		cmd.Start()
 	}
 
 }
+
 /*
 func HandleSignal() {
 	sigs := make(chan os.Signal, 1)

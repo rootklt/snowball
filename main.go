@@ -9,15 +9,8 @@ import (
 )
 
 func init() {
-
-	//launch simpler web server
-	wf := &xray.WebhookConfig{}
-	wf.ReadConfigFile()
-	go xray.WebhookServer(wf)
-
-	//logger initialize
+	go xray.WebhookServer()
 	logger.SetLogger("config/logger.json")
-	//set max cpus
 	runtime.GOMAXPROCS(2)
 }
 

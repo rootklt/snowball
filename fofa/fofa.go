@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"reflect"
+	"snowball/config"
 	"snowball/utils"
-	"snowball/xray"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,28 +20,21 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	grumble "github.com/desertbit/grumble"
-	yaml "gopkg.in/yaml.v2"
 )
 
-//定义fofa配置类型
-//请求时需要在url中使用email和key
-type FofaAuth struct {
-	Email string `yaml:"email"`
-	Key   string `yaml:"key"`
-}
-
 //fofa请求参数
-type FofaRequestParams struct {
-	FofaAuth `yaml:"fofa"`
-	Qbase64  string `json:"qbase64"`
-	Page     int    `json:"page"`
-	Fields   string `json:"field"`
-	Full     bool
-	Size     uint
+type FofaRequest struct {
+	Email   string
+	Key     string
+	Qbase64 string `json:"qbase64"`
+	Page    int    `json:"page,omitempty"`
+	Fields  string `json:"fields,omitempty"`
+	Full    bool   `json:"full,omitempty"`
+	Size    int    `json:"size,omitempty"`
 }
 
 //查询返回结果
-type FofaResults struct {
+type FofaResponse struct {
 	Mode    string     `json:"mode"`
 	Error   bool       `json:"error"`
 	ErrMsg  string     `json:"errmsg"`
@@ -52,30 +44,44 @@ type FofaResults struct {
 	Results [][]string `json:"results"`
 }
 
-func DoFofa(ctx *grumble.Context) error {
-	req := &FofaRequestParams{}
-	req.ReadConfigFile()
+const fofaURL = "https://fofa.so/api/v1/search/all?"
 
-	//如果未指定fofa查询账号和密钥，则从配置文件中获取
-	email := ctx.Flags.String("email")
-	key := ctx.Flags.String("key")
-	if key != "" && email != "" {
-		req.Key = key
-		req.Email = email
+type FofaQuery struct {
+	Context *grumble.Context
+}
+
+func (f *FofaQuery) Query() error {
+	var email, key string
+	fofa := &FofaRequest{}
+	ctx := f.Context
+	conf := &config.Fofa{}
+	config.GetConfig(conf)
+	email = ctx.Flags.String("email")
+	key = ctx.Flags.String("key")
+
+	if email != "" && key != "" {
+		//命令行参数优先
+		fofa.Email = email
+		fofa.Key = key
+	} else if conf.Email != "" && conf.Key != "" {
+		fofa.Email = conf.Email
+		fofa.Key = conf.Key
+	} else {
+		utils.WarnOutput.Println("[-]未配置fofa的email和key")
+		return nil
 	}
 
 	if q := ctx.Flags.String("query"); q == "" {
 		log.Println("查询内容不能为空")
 		return nil
 	} else {
-		req.Qbase64 = q
+		fofa.Qbase64 = q
 	}
-	//fmt.Println(req.Qbase64)
 
-	res := &FofaResults{}
-	req.FofaRequest(res)
-	if res.Error {
-		log.Println("查询错误：", res.ErrMsg)
+	fofa.Size = ctx.Flags.Int("size")
+
+	res := fofa.RequestApi()
+	if res == nil || res.Error {
 		return nil
 	} else {
 		res.Results = RemoveRepeatElement(res.Results)
@@ -105,13 +111,73 @@ func DoFofa(ctx *grumble.Context) error {
 		for t := range ch {
 			fmt.Printf("%s\n", t)
 		}
-
+		return nil
 	}
-	return nil
+
+}
+
+func (req *FofaRequest) RequestApi() *FofaResponse {
+
+	var qbase64 string
+	resp := &FofaResponse{}
+
+	if req.Qbase64 == "" {
+		utils.WarnOutput.Println("[-]查询参数不能为空")
+		return nil
+	} else {
+		qbase64 = base64.StdEncoding.EncodeToString([]byte(req.Qbase64))
+	}
+
+	//fofa查询请求参数
+	params := url.Values{}
+	params.Add("email", req.Email)
+	params.Add("key", req.Key)
+	params.Add("qbase64", qbase64)
+
+	if req.Page != 0 {
+		params.Add("page", strconv.Itoa(req.Page))
+	}
+
+	if req.Fields != "" {
+		params.Add("fields", req.Fields)
+	}
+
+	if req.Full {
+		params.Add("full", "true")
+	}
+
+	params.Add("size", strconv.Itoa(req.Size))
+
+	request, err := http.NewRequest("GET", fofaURL, nil)
+
+	request.URL.RawQuery = params.Encode()
+
+	if err != nil {
+		utils.WarnOutput.Println("[-]Request Error", request.RequestURI)
+		return nil
+	}
+
+	response, err := utils.DoRequest(request)
+
+	if err != nil {
+		utils.WarnOutput.Println("[-]", err.Error())
+		return nil
+	}
+	defer response.Body.Close()
+
+	body, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+		utils.WarnOutput.Println("[-]没有响应")
+		return nil
+	}
+
+	json.Unmarshal(body, resp)
+
+	return resp
 }
 
 func GetWebTitle(u string) string {
-
 	var title string = ""
 	doc, err := goquery.NewDocument(u)
 	if err != nil {
@@ -128,10 +194,19 @@ func GetWebTitle(u string) string {
 
 //Access url ----(http proxy)------> xray ---(results)-----> snowball
 func AccessTargets(u string) {
-	xc := &xray.XrayConfig{}
-	xc.ReadConfigFile()
+	conf := &config.Xray{}
+
+	config.GetConfig(conf)
+
+	host := conf.Host
+	port := conf.Port
+
+	if host == "" || port == 0 {
+		log.Fatalln("未配置xray代理地址和端口")
+	}
+
 	proxy := func(_ *http.Request) (*url.URL, error) {
-		return url.Parse(fmt.Sprintf("http://%s:%d", xc.Host, xc.Port))
+		return url.Parse(fmt.Sprintf("http://%s:%d", host, port))
 	}
 
 	httpTransport := &http.Transport{
@@ -142,76 +217,17 @@ func AccessTargets(u string) {
 		Timeout:   5 * time.Second,
 		Transport: httpTransport,
 	}
+
 	req, err := http.NewRequest("GET", u, nil)
-	// req, err = http.NewRequest("POST", u, nil)
 
 	resp, err := client.Do(req)
-
 	if err != nil {
 		utils.WarnOutput.Printf("Access Error: %s\n", u)
 		return
 	}
+	defer resp.Body.Close()
+
 	ioutil.ReadAll(resp.Body)
-}
-
-//读取配置文件中fofaAPI授权
-func (conf *FofaRequestParams) ReadConfigFile() error {
-	const ConfigFile = "config/config.yaml"
-	buffer, err := ioutil.ReadFile(ConfigFile)
-	if err != nil {
-		return err
-	}
-	yaml.Unmarshal(buffer, conf)
-	return nil
-}
-
-func (req *FofaRequestParams) FofaRequest(res *FofaResults) error {
-	//fofa查询API
-	const fofaURL = "https://fofa.so/api/v1/search/all?"
-
-	params := url.Values{}
-	params.Add("email", req.Email)
-	params.Add("key", req.Key)
-	params.Add("qbase64", base64.StdEncoding.EncodeToString([]byte(req.Qbase64)))
-	if req.Page != 0 {
-		params.Add("page", strconv.Itoa(req.Page))
-	}
-
-	URL := fmt.Sprintf("%s%s", fofaURL, params.Encode())
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout:   5 * time.Second,
-				DualStack: true,
-			}).DialContext,
-		},
-		Timeout: 5 * time.Second,
-	}
-	response, err := client.Get(URL)
-	if err != nil {
-		utils.WarnOutput.Println("Create http request error")
-		return err
-	}
-	if err != nil {
-		log.Printf("Error:%v", err)
-		return err
-	}
-	defer response.Body.Close()
-
-	if err != nil {
-		log.Printf("%v", err)
-		return err
-	}
-
-	if response.StatusCode != 200 {
-		log.Printf("返回响应码： %d", response.StatusCode)
-		return nil
-	}
-
-	body, _ := ioutil.ReadAll(response.Body)
-	json.Unmarshal(body, res)
-	return nil
 }
 
 func RemoveRepeatElement(resOld [][]string) [][]string {

@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"net"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -19,4 +22,24 @@ func GenUrl(u string) string {
 		}
 	}
 	return u
+}
+
+var ReqClient = &http.Client{
+	Transport: &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   5 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		Proxy: nil,
+	},
+	Timeout: 5 * time.Second,
+}
+
+func DoRequest(request *http.Request) (*http.Response, error) {
+
+	request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3100.0 Safari/537.36")
+
+	response, err := ReqClient.Do(request)
+
+	return response, err
 }
